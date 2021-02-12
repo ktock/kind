@@ -19,6 +19,7 @@ package podman
 import (
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -166,6 +167,11 @@ func commonArgs(cfg *config.Cluster, networkName string) ([]string, error) {
 	// https://github.com/kubernetes-sigs/kind/issues/1416#issuecomment-606514724
 	if mountDevMapper() {
 		args = append(args, "--volume", "/dev/mapper:/dev/mapper")
+	}
+
+	if v, ok := os.LookupEnv("KIND_EXPERIMENTAL_SNAPSHOTTER"); ok {
+		// Propagate snapshotter environment variable
+		args = append(args, "-e", fmt.Sprintf("KIND_EXPERIMENTAL_SNAPSHOTTER=%s", v))
 	}
 
 	return args, nil

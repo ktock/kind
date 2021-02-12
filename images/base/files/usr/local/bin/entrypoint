@@ -109,6 +109,21 @@ configure_containerd() {
     fake_sysctl "kernel.keys.root_maxkeys"
     fake_sysctl "kernel.keys.root_maxbytes"
   fi
+
+  if [[ "${KIND_EXPERIMENTAL_SNAPSHOTTER:-}" == "stargz" ]] ; then
+      # Enable stargz snapshotter
+      sed -i 's/snapshotter = "[^\"]*"/snapshotter = "stargz"/' /etc/containerd/config.toml
+      sed -i 's/disable_snapshot_annotations = true/disable_snapshot_annotations = false/' /etc/containerd/config.toml
+      sed -i -E 's|KUBELET_EXTRA_ARGS=(.*)|KUBELET_EXTRA_ARGS=\1 --image-service-endpoint=unix:///run/containerd-stargz-grpc/containerd-stargz-grpc.sock|' /etc/default/kubelet
+      echo "image-endpoint: unix:///run/containerd-stargz-grpc/containerd-stargz-grpc.sock" >> /etc/crictl.yaml
+      mkdir /etc/containerd-stargz-grpc
+      cat <<EOF > "/etc/containerd-stargz-grpc/config.toml"
+[cri_keychain]
+enable_keychain = true
+image_service_path = "/run/containerd/containerd.sock"
+EOF
+      systemctl enable stargz-snapshotter
+  fi
 }
 
 configure_proxy() {

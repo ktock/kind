@@ -6,6 +6,7 @@ version = 2
   discard_unpacked_layers = true
   # explicitly use default snapshotter so we can sed it in entrypoint
   snapshotter = "overlayfs"
+  disable_snapshot_annotations = true
   # explicit default here, as we're configuring it below
   default_runtime_name = "runc"
 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
@@ -25,3 +26,9 @@ version = 2
   tolerate_missing_hugepages_controller = true
   # restrict_oom_score_adj needs to be true when running inside UserNS (rootless)
   restrict_oom_score_adj = false
+
+# Load stargz snapshotter
+[proxy_plugins]
+  [proxy_plugins.stargz]
+    type = "snapshot"
+    address = "/run/containerd-stargz-grpc/containerd-stargz-grpc.sock"

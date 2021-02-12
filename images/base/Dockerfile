@@ -40,6 +40,13 @@ ARG RUNC_AMD64_SHA256SUM="b9277b5f9a8f6e5576b17d2d666ab217c7c8e2bbd34f845c42f56f
 ARG RUNC_ARM64_SHA256SUM="b892af427845a7044dd1f3f04637bccd8e835772e5c2b952bf0eb1aba4c946b4"
 ARG RUNC_PPC64LE_SHA256SUM="8e80093c39f27cd3640158e180be034687852bf38f26e21b90627288ae084a22"
 
+ARG STARGZ_SNAPSHOTTER_VERSION="v0.6.1"
+ARG STARGZ_SNAPSHOTTER_BASE_URL="https://github.com/containerd/stargz-snapshotter/releases/download/${STARGZ_SNAPSHOTTER_VERSION}"
+ARG STARGZ_SNAPSHOTTER_URL="${STARGZ_SNAPSHOTTER_BASE_URL}/stargz-snapshotter-${STARGZ_SNAPSHOTTER_VERSION}-linux-${TARGETARCH}.tar.gz"
+ARG STARGZ_SNAPSHOTTER_AMD64_SHA256SUM="33199510a712b8f52458f6ce07342db3f92e59d2137d46d90e59d7e865e7460b"
+ARG STARGZ_SNAPSHOTTER_ARM64_SHA256SUM="0bba64ea1198731e08bf47a0b5179b4cbeb72898c5d4c91467790948e9594027"
+ARG STARGZ_SNAPSHOTTER_PPC64LE_SHA256SUM="21cfbfbc0f70d5296bd7cba0efd760491d29afaa15cf02ca9457b7f08c8afa19"
+
 # Configure crictl binary from upstream
 ARG CRICTL_VERSION="v1.21.0"
 ARG CRICTL_URL="https://github.com/kubernetes-sigs/cri-tools/releases/download/${CRICTL_VERSION}/crictl-${CRICTL_VERSION}-linux-${TARGETARCH}.tar.gz"
@@ -102,7 +109,7 @@ RUN echo "Installing Packages ..." \
       conntrack iptables iproute2 ethtool socat util-linux mount ebtables udev kmod \
       libseccomp2 pigz \
       bash ca-certificates curl rsync \
-      nfs-common \
+      nfs-common fuse3 \
     && find /lib/systemd/system/sysinit.target.wants/ -name "systemd-tmpfiles-setup.service" -delete \
     && rm -f /lib/systemd/system/multi-user.target.wants/* \
     && rm -f /etc/systemd/system/*.wants/* \
@@ -131,8 +138,17 @@ RUN echo "Installing Packages ..." \
     && sha256sum --ignore-missing -c /tmp/runc.sha256 \
     && mv /tmp/runc.${TARGETARCH} /usr/local/sbin/runc \
     && chmod 755 /usr/local/sbin/runc \
+    && curl -sSL --retry 5 --output /tmp/stargz-snapshotter.${TARGETARCH}.tgz "${STARGZ_SNAPSHOTTER_URL}" \
+    && echo "${STARGZ_SNAPSHOTTER_AMD64_SHA256SUM}  /tmp/stargz-snapshotter.amd64.tgz" | tee /tmp/stargz-snapshotter.sha256 \
+    && echo "${STARGZ_SNAPSHOTTER_ARM64_SHA256SUM}  /tmp/stargz-snapshotter.arm64.tgz" | tee -a /tmp/stargz-snapshotter.sha256 \
+    && echo "${STARGZ_SNAPSHOTTER_PPC64LE_SHA256SUM}  /tmp/stargz-snapshotter.ppc64le.tgz" | tee -a /tmp/stargz-snapshotter.sha256 \
+    && sha256sum --ignore-missing -c /tmp/stargz-snapshotter.sha256 \
+    && rm -f /tmp/stargz-snapshotter.sha256 \
+    && tar -C /usr/local/bin/ -xzvf /tmp/stargz-snapshotter.${TARGETARCH}.tgz containerd-stargz-grpc \
+    && rm -f /tmp/stargz-snapshotter.${TARGETARCH}.tgz \
     && containerd --version \
     && runc --version \
+    && containerd-stargz-grpc --version \
     && systemctl enable containerd \
  && echo "Installing crictl ..." \
     && curl -sSL --retry 5 --output /tmp/crictl.${TARGETARCH}.tgz "${CRICTL_URL}" \

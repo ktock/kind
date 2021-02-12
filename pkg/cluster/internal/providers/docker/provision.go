@@ -19,6 +19,7 @@ package docker
 import (
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -201,6 +202,11 @@ func commonArgs(cluster string, cfg *config.Cluster, networkName string, nodeNam
 	}
 	for key, val := range proxyEnv {
 		args = append(args, "-e", fmt.Sprintf("%s=%s", key, val))
+	}
+
+	if v, ok := os.LookupEnv("KIND_EXPERIMENTAL_SNAPSHOTTER"); ok {
+		// Propagate snapshotter environment variable
+		args = append(args, "-e", fmt.Sprintf("KIND_EXPERIMENTAL_SNAPSHOTTER=%s", v))
 	}
 
 	// handle hosts that have user namespace remapping enabled
